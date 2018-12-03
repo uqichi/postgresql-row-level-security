@@ -44,7 +44,7 @@ Indexes:
     "idx_products_deleted_at" btree (deleted_at)
 ```
 
-Table policy?
+Table access policy
 
 ```console
 xdb-# \z products
@@ -53,4 +53,13 @@ xdb-# \z products
 --------+----------+-------+-------------------+-------------------+----------
  public | products | table |                   |                   |
 (1 row)
+```
+
+Policy table
+
+```console
+xdb=# select * from pg_policy;
+ polname | polrelid | polcmd | polpermissive | polroles | polqual | polwithcheck
+---------+----------+--------+---------------+----------+---------+--------------
+(0 rows)
 ```
