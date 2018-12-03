@@ -1,0 +1,17 @@
+version: '3.1'
+
+services:
+
+  postgres:
+    container_name: postgres
+    image: postgres:11.0
+    ports:
+    - "5432:5432"
+    restart: always
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: xuser
+      POSTGRES_PASSWORD: xpass
+      POSTGRES_DB: xdb
+    volumes:
+    - pgdata:/var/lib/postgresql/pgdata
