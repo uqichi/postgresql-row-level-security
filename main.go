@@ -68,6 +68,7 @@ func main() {
 	}
 }
 
+// setupでは2回目以降の実行でエラーが出るのでめんどいのでエラー潰してる。
 func setup(db *gorm.DB) {
 	// Clear table
 	db.DropTableIfExists(&Tenant{})
@@ -100,7 +101,7 @@ func setup(db *gorm.DB) {
 	// Create role
 	db.Exec("CREATE ROLE apple")
 	db.Exec("CREATE ROLE google")
-	//db.Exec("CREATE ROLE amazon")
+	db.Exec("CREATE ROLE amazon")
 
 	// Enable RLS
 	db.Exec("ALTER TABLE tenants ENABLE ROW LEVEL SECURITY")

@@ -380,3 +380,24 @@ OK. update,deleteの時はNO ERROR. セレクト時と同じ挙動。
 
 
 
+### RLSの設定まとめ
+簡潔に手順。
+
+```console
+// 1. create table
+CREATE TABLE accounts (manager text, company text, contact_email text);
+
+// 2. enable RLS
+ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
+
+// 3. create role(user)
+CREATE ROLE manager WITH LOGIN;
+
+// 4. create policy
+create policy account_managers on accounts to manager using (manager = current_user);
+
+// 5. grant privileges to role(user)
+GRANT ALL PRIVILEGES ON accounts TO manager;
+``` 
+
+いくつかのコマンドまとめられそうだけど、一旦こんな感じ。
