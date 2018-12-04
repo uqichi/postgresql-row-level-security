@@ -163,7 +163,7 @@ Policies:
 ユーザー作るのはREPLではできないので一旦出る。
 
 ```
-\q もしくは exit
+\q
 ```
 
 create user
