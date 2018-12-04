@@ -34,49 +34,73 @@ func main() {
 
 	setup(db)
 
-	repo, err := newRepo(db)
-	if err != nil {
-		panic(err)
-	}
-
-	// Read
-	product, err := repo.findProduct(3)
-	if err != nil {
-		panic(err)
-	}
-	p(product, "Read")
-
-	// Update
-	err = repo.updateProduct(product)
-	if err != nil {
-		panic(err)
-	}
-	p(product, "Update")
-
-	// Delete
-	err = repo.deleteProduct(3)
-	if err != nil {
-		panic(err)
-	}
-	_, err = repo.findProduct(3)
-	if err != nil {
-		if err.Error() == "record not found" {
-			fmt.Println("Deleted successfully")
-		} else {
-			panic(err)
-		}
-	}
+	//repo, err := newRepo(db)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//// Read
+	//product, err := repo.findProduct(3)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//p(product, "Read")
+	//
+	//// Update
+	//err = repo.updateProduct(product)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//p(product, "Update")
+	//
+	//// Delete
+	//err = repo.deleteProduct(3)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//_, err = repo.findProduct(3)
+	//if err != nil {
+	//	if err.Error() == "record not found" {
+	//		fmt.Println("Deleted successfully")
+	//	} else {
+	//		panic(err)
+	//	}
+	//}
 }
 
-// setupでは2回目以降の実行でエラーが出るのでめんどいのでエラー潰してる。
+// NOTE: setupでは2回目以降の実行でエラーが出るのでめんどいのでエラー潰してる。
 func setup(db *gorm.DB) {
-	// Clear table
+	// Clear
 	db.DropTableIfExists(&Tenant{})
 	db.DropTableIfExists(&Product{})
 
-	// Migrate the schema
+	// Create tables
 	db.AutoMigrate(&Tenant{})
 	db.AutoMigrate(&Product{})
+
+	// Enable RLS
+	db.Exec("ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;")
+	db.Exec("ALTER TABLE products ENABLE ROW LEVEL SECURITY;")
+
+	// Create roles(users)
+	// FIXME: ユーザー名が数字無理
+	db.Exec("CREATE ROLE 1") // Apple
+	db.Exec("CREATE ROLE 2") // Google
+	db.Exec("CREATE ROLE 3") // Amazon
+
+	// Create policies
+	db.Exec("CREATE POLICY tenant_tenants ON tenants USING(id = current_user)")
+	db.Exec("CREATE POLICY tenant_products ON products USING(tenant_id = current_user)")
+
+	// Grant privileges
+	// TODO: ここテーブル単位でやるのかって感じだからなんか方法考える。
+	// 多分親ロールみたいなの作ってそれに各テナントのrole属する形にすれば良さそう。
+	db.Exec("GRANT ALL PRIVILEGES ON tenants TO 1")
+	db.Exec("GRANT ALL PRIVILEGES ON tenants TO 2")
+	db.Exec("GRANT ALL PRIVILEGES ON tenants TO 3")
+	db.Exec("GRANT ALL PRIVILEGES ON products TO 1")
+	db.Exec("GRANT ALL PRIVILEGES ON products TO 2")
+	db.Exec("GRANT ALL PRIVILEGES ON products TO 3")
 
 	// Create records
 	{
@@ -97,18 +121,6 @@ func setup(db *gorm.DB) {
 		db.Create(&Product{TenantID: tenant.ID, Title: "Amazon fireTV", Price: 6000})
 		db.Create(&Product{TenantID: tenant.ID, Title: "Amazon mini", Price: 2000})
 	}
-
-	// Create role
-	db.Exec("CREATE ROLE apple")
-	db.Exec("CREATE ROLE google")
-	db.Exec("CREATE ROLE amazon")
-
-	// Enable RLS
-	db.Exec("ALTER TABLE tenants ENABLE ROW LEVEL SECURITY")
-	db.Exec("ALTER TABLE products ENABLE ROW LEVEL SECURITY")
-
-	// Create policy
-	db.Exec("CREATE POLICY tenants ON id USING(true) WITH CHECK")
 }
 
 type repo struct {

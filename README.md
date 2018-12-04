@@ -401,3 +401,9 @@ GRANT ALL PRIVILEGES ON accounts TO manager;
 ``` 
 
 いくつかのコマンドまとめられそうだけど、一旦こんな感じ。
+
+## Extra
+
+`CONNECTION LIMIT connlimit`
+
+ロール作成時に最大接続数を設定できる。
