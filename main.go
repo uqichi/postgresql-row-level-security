@@ -69,7 +69,7 @@ func main() {
 }
 
 func setup(db *gorm.DB) {
-	// Clear
+	// Clear table
 	db.DropTableIfExists(&Tenant{})
 	db.DropTableIfExists(&Product{})
 
@@ -77,7 +77,7 @@ func setup(db *gorm.DB) {
 	db.AutoMigrate(&Tenant{})
 	db.AutoMigrate(&Product{})
 
-	// Create
+	// Create records
 	{
 		tenant := &Tenant{Name: "Apple"}
 		db.Create(tenant)
@@ -96,6 +96,18 @@ func setup(db *gorm.DB) {
 		db.Create(&Product{TenantID: tenant.ID, Title: "Amazon fireTV", Price: 6000})
 		db.Create(&Product{TenantID: tenant.ID, Title: "Amazon mini", Price: 2000})
 	}
+
+	// Create role
+	db.Exec("CREATE ROLE apple")
+	db.Exec("CREATE ROLE google")
+	//db.Exec("CREATE ROLE amazon")
+
+	// Enable RLS
+	db.Exec("ALTER TABLE tenants ENABLE ROW LEVEL SECURITY")
+	db.Exec("ALTER TABLE products ENABLE ROW LEVEL SECURITY")
+
+	// Create policy
+	db.Exec("CREATE POLICY tenants ON id USING(true) WITH CHECK")
 }
 
 type repo struct {
