@@ -32,6 +32,8 @@ func main() {
 		panic("failed to ping")
 	}
 
+	cleanup(db)
+
 	setup(db)
 
 	//repo, err := newRepo(db)
@@ -68,12 +70,18 @@ func main() {
 	//}
 }
 
-// NOTE: setupでは2回目以降の実行でエラーが出るのでめんどいのでエラー潰してる。
-func setup(db *gorm.DB) {
-	// Clear
+func cleanup(db *gorm.DB) {
+	// Drop tables (including RLS setting and its policies)
 	db.DropTableIfExists(&Tenant{})
 	db.DropTableIfExists(&Product{})
 
+	// Drop roles
+	db.Exec("DROP ROLE IF EXISTS apple")
+	db.Exec("DROP ROLE IF EXISTS google")
+	db.Exec("DROP ROLE IF EXISTS amazon")
+}
+
+func setup(db *gorm.DB) {
 	// Create tables
 	db.AutoMigrate(&Tenant{})
 	db.AutoMigrate(&Product{})
@@ -83,40 +91,56 @@ func setup(db *gorm.DB) {
 	db.Exec("ALTER TABLE products ENABLE ROW LEVEL SECURITY;")
 
 	// Create roles(users)
-	// FIXME: ユーザー名が数字無理
-	db.Exec("CREATE ROLE 1") // Apple
-	db.Exec("CREATE ROLE 2") // Google
-	db.Exec("CREATE ROLE 3") // Amazon
+	db.Exec("CREATE ROLE apple WITH LOGIN")  // Apple
+	db.Exec("CREATE ROLE google WITH LOGIN") // Google
+	db.Exec("CREATE ROLE amazon WITH LOGIN") // Amazon
 
 	// Create policies
-	db.Exec("CREATE POLICY tenant_tenants ON tenants USING(id = current_user)")
-	db.Exec("CREATE POLICY tenant_products ON products USING(tenant_id = current_user)")
+	// TODO: role=apple$1 みたいにして USING(id = EXTRACT_ID(current_user)) みたいなことできればポリシー一つで済むようになる
+	{
+		db.Exec("CREATE POLICY apple_tenants ON tenants TO apple USING(id = 1)")
+		db.Exec("CREATE POLICY apple_products ON products TO apple USING(tenant_id = 1)")
+	}
+	{
+		db.Exec("CREATE POLICY google_tenants ON tenants TO google USING(id = 2)")
+		db.Exec("CREATE POLICY google_products ON products TO google USING(tenant_id = 2)")
+	}
+	{
+		db.Exec("CREATE POLICY amazon_tenants ON tenants TO amazon USING(id = 3)")
+		db.Exec("CREATE POLICY amazon_products ON products TO amazon USING(tenant_id = 3)")
+	}
 
 	// Grant privileges
 	// TODO: ここテーブル単位でやるのかって感じだからなんか方法考える。
 	// 多分親ロールみたいなの作ってそれに各テナントのrole属する形にすれば良さそう。
-	db.Exec("GRANT ALL PRIVILEGES ON tenants TO 1")
-	db.Exec("GRANT ALL PRIVILEGES ON tenants TO 2")
-	db.Exec("GRANT ALL PRIVILEGES ON tenants TO 3")
-	db.Exec("GRANT ALL PRIVILEGES ON products TO 1")
-	db.Exec("GRANT ALL PRIVILEGES ON products TO 2")
-	db.Exec("GRANT ALL PRIVILEGES ON products TO 3")
+	{
+		db.Exec("GRANT ALL PRIVILEGES ON tenants TO apple")
+		db.Exec("GRANT ALL PRIVILEGES ON products TO apple")
+	}
+	{
+		db.Exec("GRANT ALL PRIVILEGES ON tenants TO google")
+		db.Exec("GRANT ALL PRIVILEGES ON products TO google")
+	}
+	{
+		db.Exec("GRANT ALL PRIVILEGES ON tenants TO amazon")
+		db.Exec("GRANT ALL PRIVILEGES ON products TO amazon")
+	}
 
 	// Create records
 	{
 		tenant := &Tenant{Name: "Apple"}
-		db.Create(tenant)
+		db.Create(tenant) // id:1
 		db.Create(&Product{TenantID: tenant.ID, Title: "Macbook Pro", Price: 250000})
 		db.Create(&Product{TenantID: tenant.ID, Title: "iPhoneX", Price: 120000})
 	}
 	{
 		tenant := &Tenant{Name: "Google"}
-		db.Create(tenant)
+		db.Create(tenant) // id:2
 		db.Create(&Product{TenantID: tenant.ID, Title: "Pixel3", Price: 140000})
 	}
 	{
 		tenant := &Tenant{Name: "Amazon"}
-		db.Create(tenant)
+		db.Create(tenant) // id:3
 		db.Create(&Product{TenantID: tenant.ID, Title: "Amazon echo", Price: 4500})
 		db.Create(&Product{TenantID: tenant.ID, Title: "Amazon fireTV", Price: 6000})
 		db.Create(&Product{TenantID: tenant.ID, Title: "Amazon mini", Price: 2000})

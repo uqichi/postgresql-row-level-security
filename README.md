@@ -11,6 +11,12 @@
 
 コードを書く前に、まずはREPLでpotgre動きとかRLSの使い方を確認していく。
 
+## Postgres
+
+最新バージョン `11.x`
+
+documentation: https://www.postgresql.org/docs/11/index.html
+
 ## 作業ログ
 
 ### とりあえずpostgreSQLを触る
@@ -402,8 +408,38 @@ GRANT ALL PRIVILEGES ON accounts TO manager;
 
 いくつかのコマンドまとめられそうだけど、一旦こんな感じ。
 
-## Extra
+## Extras
 
+### Max Connections
 `CONNECTION LIMIT connlimit`
 
 ロール作成時に最大接続数を設定できる。
+
+
+### Role Name
+ロール名には制約がある。
+
+https://www.postgresql.org/docs/current/sql-syntax-lexical.html
+
+ちなみにこのsyntaxルールはロール名に限らず。
+
+>SQL identifiers and key words must begin with a letter (a-z, but also letters with diacritical marks and non-Latin letters) or an underscore (_). Subsequent characters in an identifier or key word can be letters, underscores, digits (0-9), or dollar signs ($).
+
+注意
+
+>Note that dollar signs are not allowed in identifiers according to the letter of the SQL standard, so their use might render applications less portable. The SQL standard will not define a key word that contains digits or starts or ends with an underscore, so identifiers of this form are safe against possible conflict with future extensions of the standard.
+
+今回マルチテナントでのRLS実装においては、ポリシーを
+
+```
+CREATE POLICY {policy} ON tenants USING(id = current_user)
+```
+
+な感じにしたら、テナント単位でポリシー作らなくて良くなるので、
+`hoge_1` , `hoge$1` みたいにして、最後のtenant_idを抽出、ポリシーのルールに使用というかんじにしたい。抽出ができるのかは未明。
+
+できないようならテナントごとにポリシー作って当てる感じになると思う。まあ上できなそうだしこっちになりそう。いか、
+
+```
+CREATE POLICY {policy} ON tenants USING(id = 3) TO {role}
+```
